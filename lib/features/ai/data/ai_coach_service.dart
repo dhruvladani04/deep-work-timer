@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:deep_work_timer/features/ai/data/smart_parser.dart';
 
 // Simple model to hold stats for the prompt
 class CoachStats {
@@ -67,7 +69,7 @@ Constraints:
     required String task,
   }) async {
     try {
-      final model = GenerativeModel(model: 'gemini-pro', apiKey: apiKey);
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
 
       final prompt =
           '''
@@ -87,6 +89,50 @@ Return ONLY the single word of the category. No punctuation.
       return text;
     } catch (e) {
       return 'Other';
+    }
+  }
+
+  Future<TimerCommand> parseTimerCommand({
+    required String apiKey,
+    required String command,
+  }) async {
+    try {
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
+
+      final prompt = '''
+Parse the following input into a timer command.
+Input: "$command"
+
+Extract:
+1. Duration in minutes (integer). Default to 25 if not specified.
+2. Whether it is a "break" or "rest" (boolean).
+3. The task name (string). Remove time words and "focus on", "work on". If no task, return empty string.
+
+Return a JSON object with keys: "durationMinutes", "isBreak", "taskName".
+Do NOT use Markdown code blocks. Just the raw JSON.
+''';
+
+      final response = await model.generateContent([Content.text(prompt)]);
+      var text = response.text?.trim() ?? '{}';
+
+      // Clean up potential markdown code blocks if the model adds them
+      if (text.startsWith('```json')) {
+        text = text.replaceAll('```json', '').replaceAll('```', '');
+      } else if (text.startsWith('```')) {
+         text = text.replaceAll('```', '');
+      }
+
+      final json = jsonDecode(text) as Map<String, dynamic>;
+
+      return TimerCommand(
+        durationMinutes: json['durationMinutes'] as int? ?? 25,
+        isBreak: json['isBreak'] as bool? ?? false,
+        taskName: (json['taskName'] as String?)?.isNotEmpty == true ? json['taskName'] : null,
+      );
+
+    } catch (e) {
+       // Fallback to regex parser
+       return SmartParser.parse(command);
     }
   }
 }
