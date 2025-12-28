@@ -6,6 +6,8 @@ import '../../stats/presentation/stats_screen.dart';
 import '../../sounds/data/sound_service.dart';
 import '../../settings/data/theme_service.dart';
 import '../../ai/data/smart_parser.dart';
+import '../../ai/data/ai_coach_service.dart';
+import '../../ai/data/api_key_service.dart';
 import '../application/timer_notifier.dart';
 
 class TimerScreen extends ConsumerStatefulWidget {
@@ -180,10 +182,49 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
                   fontSize: 14,
                   color: colorScheme.onSurface,
                 ),
-                onSubmitted: (value) {
+                onSubmitted: (value) async {
                   if (value.trim().isEmpty) return;
 
-                  final command = SmartParser.parse(value);
+                  final apiKey = ref.read(apiKeyProvider);
+                  TimerCommand command;
+
+                  if (apiKey != null && apiKey.isNotEmpty) {
+                    // Use AI if key is available
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Asking Gemini...'),
+                        duration: Duration(milliseconds: 1000),
+                      ),
+                    );
+                    try {
+                      command = await ref
+                          .read(aiCoachProvider)
+                          .parseTimerCommand(apiKey: apiKey, command: value);
+                    } catch (e) {
+                      command = SmartParser.parse(value);
+                    }
+                  } else {
+                    // Fallback to regex or prompt for key
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text(
+                          'Add API Key in Stats for smarter parsing!',
+                        ),
+                        action: SnackBarAction(
+                          label: 'Settings',
+                          onPressed: () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (context) => const StatsScreen(),
+                          ),
+                        ),
+                      ),
+                    );
+                    command = SmartParser.parse(value);
+                  }
+
+                  if (!mounted) return;
+
                   final notifier = ref.read(timerProvider.notifier);
 
                   // 1. Update Duration & Phase
