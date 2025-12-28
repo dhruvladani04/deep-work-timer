@@ -5,8 +5,12 @@ A professional-grade Pomodoro timer application built with Flutter, designed to 
 ## 🚀 Features
 
 - **🎯 Focus & Break Timer**: Customizable durations for deep work sessions and short breaks.
+- **✨ AI-Powered Productivity**:
+  - **Smart NLP Input**: Type naturally (e.g., *"Focus for 45m on Project X"*) and the app sets everything up for you.
+  - **AI Coach**: Get personalized, context-aware insights and motivation based on your actual work history (Powered by **Gemini**).
+  - **Intelligent Categorization**: Tasks are automatically categorized (Work, Study, Health, Chores) for detailed analytics.
 - **📝 Task Tracking**: Input your current objective to stay aligned with your goals.
-- **📊 Statistics Dashboard**: Visualize your productivity with beautiful bar charts showing daily completed sessions (last 7 days).
+- **📊 Statistics Dashboard**: Visualize your productivity with beautiful bar charts and category breakdowns.
 - **🎧 Ambient Soundscapes**: Built-in high-quality audio streams (Rain 🌧️, Forest 🌲, Fireplace 🔥, Cafe ☕) to mask distractions.
 - **🔔 Smart Notifications**: Native system alerts notify you when a session ends, even if the app is in the background.
 - **🎨 Dynamic Themes**: Customize the app's look with beautiful color presets (Classic, Ocean, Lavender, Forest) that adapt to your timer phase.
@@ -15,6 +19,7 @@ A professional-grade Pomodoro timer application built with Flutter, designed to 
 ## 🛠️ Tech Stack
 
 - **Framework**: Flutter
+- **AI / LLM**: [google_generative_ai](https://pub.dev/packages/google_generative_ai) (Gemini API)
 - **State Management**: [flutter_riverpod](https://pub.dev/packages/flutter_riverpod)
 - **Persistence**: [shared_preferences](https://pub.dev/packages/shared_preferences)
 - **Charts**: [fl_chart](https://pub.dev/packages/fl_chart)
