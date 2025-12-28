@@ -5,6 +5,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import '../../stats/presentation/stats_screen.dart';
 import '../../sounds/data/sound_service.dart';
 import '../../settings/data/theme_service.dart';
+import '../../ai/data/smart_parser.dart';
 import '../application/timer_notifier.dart';
 
 class TimerScreen extends ConsumerStatefulWidget {
@@ -15,6 +16,14 @@ class TimerScreen extends ConsumerStatefulWidget {
 }
 
 class _TimerScreenState extends ConsumerState<TimerScreen> {
+  final _smartInputController = TextEditingController();
+
+  @override
+  void dispose() {
+    _smartInputController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
@@ -92,27 +101,123 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
             ),
             const SizedBox(height: 16),
             // Task Input
+            // Task Input with Category Badge
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: IntrinsicWidth(
-                child: TextFormField(
-                  initialValue: timerState.currentTask,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'What are you working on?',
-                    hintStyle: GoogleFonts.outfit(
-                      color: colorScheme.outline.withOpacity(0.5),
+              child: Column(
+                children: [
+                  IntrinsicWidth(
+                    child: TextFormField(
+                      initialValue: timerState.currentTask,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'What are you working on?',
+                        hintStyle: GoogleFonts.outfit(
+                          color: colorScheme.outline.withOpacity(0.5),
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      // Only update/categorize on submit to save API calls
+                      onFieldSubmitted: (val) {
+                        if (val.trim().isNotEmpty) {
+                          notifier.setTask(val); // Triggers API
+                        }
+                      },
                     ),
-                    border: InputBorder.none,
-                    isDense: true,
                   ),
-                  onChanged: notifier.setTask,
+                  if (timerState.currentCategory != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        timerState.currentCategory!,
+                        style: GoogleFonts.outfit(
+                          color: colorScheme.onPrimaryContainer,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // ✨ Smart AI Input
+            const SizedBox(height: 24),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: TextField(
+                controller: _smartInputController,
+                decoration: InputDecoration(
+                  icon: Icon(Icons.auto_awesome, color: colorScheme.primary),
+                  hintText: 'e.g. "Focus for 45m on Math"',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  ),
+                  border: InputBorder.none,
                 ),
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  color: colorScheme.onSurface,
+                ),
+                onSubmitted: (value) {
+                  if (value.trim().isEmpty) return;
+
+                  final command = SmartParser.parse(value);
+                  final notifier = ref.read(timerProvider.notifier);
+
+                  // 1. Update Duration & Phase
+                  if (command.isBreak) {
+                    notifier.setBreakDuration(command.durationMinutes);
+                    notifier.reset(); // Apply changes
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Break set for ${command.durationMinutes} mins',
+                        ),
+                        backgroundColor: colorScheme.secondary,
+                      ),
+                    );
+                  } else {
+                    notifier.setFocusDuration(command.durationMinutes);
+                    // If task is found, update it
+                    if (command.taskName != null) {
+                      notifier.setTask(command.taskName!);
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Focus set for ${command.durationMinutes} mins',
+                        ),
+                        backgroundColor: colorScheme.primary,
+                      ),
+                    );
+                  }
+
+                  _smartInputController.clear();
+                },
               ),
             ),
             const Spacer(),

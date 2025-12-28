@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/timer_state.dart';
 import '../../stats/data/stats_repository.dart';
 import '../../notifications/data/notification_service.dart';
+import '../../ai/data/api_key_service.dart';
+import '../../ai/data/ai_coach_service.dart';
 
 class TimerNotifier extends Notifier<TimerState> {
   Timer? _timer;
@@ -12,6 +14,7 @@ class TimerNotifier extends Notifier<TimerState> {
     return TimerState.initial();
   }
 
+  // ... existing start/pause/reset ...
   void start() {
     if (state.isRunning) return;
     state = state.copyWith(isRunning: true);
@@ -52,8 +55,20 @@ class TimerNotifier extends Notifier<TimerState> {
     }
   }
 
-  void setTask(String task) {
-    state = state.copyWith(currentTask: task);
+  Future<void> setTask(String task) async {
+    state = state.copyWith(currentTask: task, currentCategory: null);
+
+    // Categorize if possible
+    final apiKey = ref.read(apiKeyProvider);
+    if (apiKey != null && apiKey.isNotEmpty && task.isNotEmpty) {
+      final category = await ref
+          .read(aiCoachProvider)
+          .categorizeTask(apiKey: apiKey, task: task);
+      // Only update if task hasn't changed in the meantime
+      if (state.currentTask == task) {
+        state = state.copyWith(currentCategory: category);
+      }
+    }
   }
 
   void _tick() {
@@ -73,7 +88,13 @@ class TimerNotifier extends Notifier<TimerState> {
     // If we just finished a FOCUS session (moving to break), save stats
     if (nextPhase == TimerPhase.breakPhase) {
       // Save Stats
-      ref.read(statsRepositoryProvider).saveSession();
+      ref
+          .read(statsRepositoryProvider)
+          .saveSession(
+            taskName: state.currentTask,
+            category: state.currentCategory,
+            durationMinutes: state.focusDuration,
+          );
       // Notify
       ref
           .read(notificationServiceProvider)

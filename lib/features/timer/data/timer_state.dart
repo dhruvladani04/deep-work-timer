@@ -17,6 +17,7 @@ class TimerState {
   final int focusDuration; // in minutes
   final int breakDuration; // in minutes
   final String? currentTask;
+  final String? currentCategory;
 
   const TimerState({
     required this.timeLeft,
@@ -26,6 +27,7 @@ class TimerState {
     required this.focusDuration,
     required this.breakDuration,
     this.currentTask,
+    this.currentCategory,
   });
 
   factory TimerState.initial() {
@@ -37,6 +39,7 @@ class TimerState {
       focusDuration: 25,
       breakDuration: 5,
       currentTask: null,
+      currentCategory: null,
     );
   }
 
@@ -48,6 +51,7 @@ class TimerState {
     int? focusDuration,
     int? breakDuration,
     String? currentTask,
+    String? currentCategory,
   }) {
     return TimerState(
       timeLeft: timeLeft ?? this.timeLeft,
@@ -57,6 +61,7 @@ class TimerState {
       focusDuration: focusDuration ?? this.focusDuration,
       breakDuration: breakDuration ?? this.breakDuration,
       currentTask: currentTask ?? this.currentTask,
+      currentCategory: currentCategory ?? this.currentCategory,
     );
   }
 }
